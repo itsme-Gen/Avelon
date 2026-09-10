@@ -31,6 +31,7 @@ export default function HomeScreen() {
   const [showVerification, setShowVerification] = useState(false);
   const isVerified = useVerificationStore((state) => state.isVerified);
   const kycStatus = useVerificationStore((state) => state.kycStatus);
+  const kycRejectionReason = useVerificationStore((state) => state.kycRejectionReason);
   const checkKycStatus = useVerificationStore((state) => state.checkKycStatus);
   const resetFormData = useVerificationStore((state) => state.resetFormData);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -246,7 +247,8 @@ export default function HomeScreen() {
               Verification rejected
             </Text>
             <Text className="text-sm text-red-700 mt-1">
-              Please re-submit your documents with the correct information.
+              {kycRejectionReason ??
+                "Please re-submit your documents with the correct information."}
             </Text>
           </View>
           <TouchableOpacity

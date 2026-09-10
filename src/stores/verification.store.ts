@@ -41,6 +41,8 @@ export interface IdDocumentsData {
 type VerificationState = {
   isVerified: boolean;
   kycStatus: string | null; // 'VERIFIED' | 'PENDING_KYC' | 'APPROVED' | 'REJECTED' etc.
+  // Why verification failed, in words the borrower can act on. Set by the backend.
+  kycRejectionReason: string | null;
 
   // Form data persisted across verification screens
   basicInfo: BasicInfoData;
@@ -101,6 +103,7 @@ const initialIdDocuments: IdDocumentsData = {
 export const useVerificationStore = create<VerificationState>((set) => ({
   isVerified: false,
   kycStatus: null,
+  kycRejectionReason: null,
 
   basicInfo: { ...initialBasicInfo },
   contactInfo: { ...initialContactInfo },
@@ -109,11 +112,12 @@ export const useVerificationStore = create<VerificationState>((set) => ({
   faceMatchPassed: null,
   faceMatchScore: null,
 
-  markVerified: () => set({ isVerified: true, kycStatus: "APPROVED" }),
+  markVerified: () => set({ isVerified: true, kycStatus: "APPROVED", kycRejectionReason: null }),
   resetVerification: () =>
     set({
       isVerified: false,
       kycStatus: null,
+      kycRejectionReason: null,
     }),
   setKycStatus: (status) =>
     set({
@@ -127,6 +131,7 @@ export const useVerificationStore = create<VerificationState>((set) => ({
         const status = result.data.status;
         set({
           kycStatus: status,
+          kycRejectionReason: result.data.rejectionReason ?? null,
           isVerified: status === "APPROVED" || status === "CONNECTED",
         });
       }
