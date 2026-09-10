@@ -1,3 +1,5 @@
+import { CHAIN_NAME } from '@/config/chain';
+
 /**
  * Maps WalletConnect / wagmi / viem errors to user-friendly messages.
  */
@@ -22,7 +24,7 @@ export function getWalletErrorMessage(error: unknown): string {
         message.includes('chain not configured') ||
         message.includes('SwitchChainError')
     ) {
-        return 'Please switch to Base Sepolia testnet in your wallet.';
+        return `Please switch to ${CHAIN_NAME} in your wallet.`;
     }
 
     // Insufficient funds
