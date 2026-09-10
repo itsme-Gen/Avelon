@@ -1,4 +1,5 @@
 import { CustomAlert } from "@/components/alertbutton/CustomAlert";
+import { useToast } from "@/components/toast";
 import * as loanService from "@/services/loan.service";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -125,6 +126,7 @@ function TermsAndConditionsModal({
 
 export default function LoanApplication() {
   const router = useRouter();
+  const toast = useToast();
   const params = useLocalSearchParams<{
     planId: string;
     title: string;
@@ -232,36 +234,11 @@ export default function LoanApplication() {
         return;
       }
 
-      setAlert({
-        visible: true,
-        title: "Loan Applied",
-        message: "Your loan application has been submitted. Deposit collateral to activate it.",
-        icon: "checkmark-circle-outline",
-        iconColor: "#10B981",
-        buttons: [
-          {
-            text: "Deposit Collateral",
-            onPress: () => {
-              const loan = result.data!;
-              router.replace({
-                pathname: "/collateral-deposit",
-                params: {
-                  loanId: loan.id,
-                  contractLoanId: String(loan.contractLoanId ?? ""),
-                  collateralRequired: loan.collateralRequired,
-                  depositAddress: loan.depositAddress ?? "",
-                  loanTitle: loanTitle,
-                },
-              });
-            },
-          },
-          {
-            text: "Later",
-            style: "cancel",
-            onPress: () => router.back(),
-          },
-        ],
-      });
+      // No collateral prompt here: the loan has no on-chain identity until an admin
+      // approves it, so there is nothing to deposit against yet. Records shows the
+      // application as Awaiting Review and offers the deposit once it is approved.
+      toast.success("Loan applied — awaiting review");
+      router.replace("/(tabs)/Records");
     } catch (error) {
       console.error("[LoanApplication] Apply error:", error);
       setAlert({

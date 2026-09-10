@@ -2,17 +2,47 @@
  * Notification Service
  *
  * Handles FCM device token registration for push notifications.
- * Requires a development build — does NOT work in Expo Go.
+ * Requires a development build. In Expo Go every function here is a no-op.
  */
-import * as Notifications from 'expo-notifications';
+import type * as NotificationsModule from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { API_BASE_URL } from '@/config';
 import { getAccessToken } from '@/utils/storage';
 import { authenticatedFetch } from './authenticated-fetch';
 
+type Notifications = typeof NotificationsModule;
+
+// Expo Go dropped Android push support in SDK 53 and throws the moment
+// expo-notifications is imported. auth.store imports this file and the tab layout
+// imports auth.store, so that throw blanked every screen. Load it lazily instead:
+// a development build still gets pushes, Expo Go just goes without them.
+const IN_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+let cachedModule: Notifications | null | undefined;
+
+/** The native module, or null wherever it cannot be loaded. */
+export function getNotifications(): Notifications | null {
+    if (cachedModule !== undefined) return cachedModule;
+    if (IN_EXPO_GO) {
+        console.warn('[Notifications] Running in Expo Go — push notifications are disabled.');
+        cachedModule = null;
+        return null;
+    }
+    try {
+        // Must stay lazy; a static import throws on load in Expo Go.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        cachedModule = require('expo-notifications') as Notifications;
+    } catch (error) {
+        console.warn('[Notifications] Module unavailable:', error);
+        cachedModule = null;
+    }
+    return cachedModule;
+}
+
 // ─── Foreground notification behaviour ───────────────────────────────────────
-Notifications.setNotificationHandler({
+getNotifications()?.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowAlert: true,
         shouldPlaySound: true,
@@ -24,19 +54,23 @@ Notifications.setNotificationHandler({
 
 // ─── Android notification channel ────────────────────────────────────────────
 export async function setupAndroidChannel() {
-    if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-            name: 'Avelon Notifications',
-            importance: Notifications.AndroidImportance.MAX,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: '#000000',
-            sound: 'default',
-        });
-    }
+    const Notifications = getNotifications();
+    if (!Notifications || Platform.OS !== 'android') return;
+
+    await Notifications.setNotificationChannelAsync('default', {
+        name: 'Avelon Notifications',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#000000',
+        sound: 'default',
+    });
 }
 
 // ─── Request permission & get FCM token ──────────────────────────────────────
 export async function getFCMToken(): Promise<string | null> {
+    const Notifications = getNotifications();
+    if (!Notifications) return null;
+
     if (!Device.isDevice) {
         console.warn('[Notifications] Push notifications only work on a physical device.');
         return null;
