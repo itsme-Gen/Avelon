@@ -181,6 +181,25 @@ export default function WalletScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wcConnected, wcAddress]);
 
+  // openAppKit rejects when the session is never approved, and nothing else in
+  // this screen would notice: the effect above only runs once a wallet is
+  // already connected. Without this a failed connection is completely silent.
+  const handleConnectPress = async () => {
+    try {
+      await openAppKit();
+    } catch (error) {
+      console.error("[Wallet] AppKit open error:", error);
+      setAlert({
+        visible: true,
+        title: "Connection Failed",
+        message: getWalletErrorMessage(error),
+        buttons: [{ text: "OK" }],
+        icon: "alert-circle",
+        iconColor: "#EF4444",
+      });
+    }
+  };
+
   const handleDisconnect = () => {
     if (!primaryWallet) return;
     setAlert({
@@ -410,7 +429,7 @@ export default function WalletScreen() {
 
               {/* Primary: WalletConnect */}
               <TouchableOpacity
-                onPress={() => openAppKit()}
+                onPress={handleConnectPress}
                 disabled={isConnecting}
                 style={{
                   backgroundColor: "rgba(255,255,255,0.22)",
