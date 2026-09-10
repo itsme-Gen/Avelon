@@ -1,6 +1,6 @@
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AppKitProvider } from '@reown/appkit-react-native';
+import { AppKit, AppKitProvider } from '@reown/appkit-react-native';
 import { wagmiConfig, appKit } from '@/config/wagmi';
 import type { ReactNode } from 'react';
 
@@ -12,6 +12,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             <WagmiProvider config={wagmiConfig}>
                 <QueryClientProvider client={queryClient}>
                     {children}
+                    {/* AppKitProvider only supplies context. Without this the connect
+                        modal has nothing to render and open() appears to do nothing. */}
+                    <AppKit />
                 </QueryClientProvider>
             </WagmiProvider>
         </AppKitProvider>

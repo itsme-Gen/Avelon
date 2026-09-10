@@ -1,6 +1,7 @@
 import "@/polyfills/wallet-compat";
+import { ToastProvider } from "@/components/toast";
 import { WalletProvider } from "@/providers/WalletProvider";
-import { setupAndroidChannel } from "@/services/notification.service";
+import { getNotifications, setupAndroidChannel } from "@/services/notification.service";
 import {
     Syne_400Regular,
     Syne_500Medium,
@@ -9,7 +10,6 @@ import {
     Syne_800ExtraBold,
 } from "@expo-google-fonts/syne";
 import { useFonts } from "expo-font";
-import * as Notifications from "expo-notifications";
 import { Stack, router } from "expo-router";
 import type { Href } from "expo-router";
 import * as NativeSplashScreen from "expo-splash-screen";
@@ -50,10 +50,10 @@ export default function RootLayout() {
     Syne_700Bold,
     Syne_800ExtraBold,
   });
-  const notificationListener = useRef<Notifications.EventSubscription | null>(
-    null,
-  );
-  const responseListener = useRef<Notifications.EventSubscription | null>(null);
+  // Structural type so this file never imports expo-notifications, which throws
+  // on load in Expo Go.
+  const notificationListener = useRef<{ remove: () => void } | null>(null);
+  const responseListener = useRef<{ remove: () => void } | null>(null);
 
   useEffect(() => {
     checkSession().catch(() => undefined);
@@ -118,6 +118,10 @@ export default function RootLayout() {
     // Set up Android notification channel
     setupAndroidChannel();
 
+    // null in Expo Go, where push notifications are unavailable
+    const Notifications = getNotifications();
+    if (!Notifications) return;
+
     // Listener: notification received while app is in foreground
     notificationListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
@@ -150,19 +154,21 @@ export default function RootLayout() {
 
   return (
     <WalletProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Protected guard={isAuthenticated}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(verification)" />
-          <Stack.Screen name="(settings)" />
-          <Stack.Screen name="loan-application" />
-          <Stack.Screen name="collateral-deposit" />
-          <Stack.Screen name="loan-repayment" />
-          <Stack.Screen name="notifications" />
-        </Stack.Protected>
-      </Stack>
+      <ToastProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Protected guard={isAuthenticated}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(verification)" />
+            <Stack.Screen name="(settings)" />
+            <Stack.Screen name="loan-application" />
+            <Stack.Screen name="collateral-deposit" />
+            <Stack.Screen name="loan-repayment" />
+            <Stack.Screen name="notifications" />
+          </Stack.Protected>
+        </Stack>
+      </ToastProvider>
     </WalletProvider>
   );
 }
