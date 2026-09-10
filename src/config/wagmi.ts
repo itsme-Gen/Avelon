@@ -12,11 +12,20 @@ if (!projectId) {
   throw new Error("EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID is required");
 }
 
+// Wallets fetch this metadata to build their connection prompt. avelon.app is a
+// parked domain that accepts the TCP connection and then never answers, so the
+// icon fetch hangs rather than 404ing — MetaMask opens and renders nothing.
+// The API origin is somewhere that actually responds, and no icon is better than
+// one that stalls: wallets fall back to their own placeholder.
+const apiOrigin =
+  process.env.EXPO_PUBLIC_API_URL?.match(/^https?:\/\/[^/]+/)?.[0] ??
+  "https://reown.com";
+
 const metadata = {
   name: "Avelon",
   description: "Decentralized Lending Platform",
-  url: "https://avelon.app",
-  icons: ["https://avelon.app/icon.png"],
+  url: apiOrigin,
+  icons: [],
   redirect: {
     // Expo Go never registers the app's own scheme, so a hardcoded avelon:// is a
     // dead address there and the wallet has no way back. createURL resolves to
