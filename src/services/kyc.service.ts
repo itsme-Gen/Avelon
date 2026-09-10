@@ -2,9 +2,41 @@
  * KYC Service (API Client)
  * Handles KYC profile submission, document uploads, and verification status.
  */
+import { File } from 'expo-file-system';
 import { API_BASE_URL } from '@/config';
 import { authenticatedFetch } from './authenticated-fetch';
 import { getAccessToken } from '@/utils/storage';
+
+// The backend validates the extension and the MIME type separately, so a PNG
+// labelled image/jpeg is rejected. Derive the type from the name.
+const MIME_BY_EXTENSION: Record<string, string> = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+};
+
+/**
+ * Turn an image URI into something Expo's FormData encoder accepts.
+ *
+ * SDK 54 replaced the global fetch, and its encoder handles only a string, a Blob
+ * or an object exposing bytes(). React Native's classic { uri, name, type } part
+ * throws "Unsupported FormDataPart implementation", so read the file here and pass
+ * the bytes along with the name and type the backend checks.
+ */
+async function toFilePart(uri: string, fallbackName: string) {
+    const file = new File(uri);
+    const name = file.name || fallbackName;
+    const dot = name.lastIndexOf('.');
+    const extension = dot > 0 ? name.slice(dot).toLowerCase() : '';
+    const bytes = new Uint8Array(await file.arrayBuffer());
+
+    return {
+        name: extension ? name : `${name}.jpg`,
+        type: MIME_BY_EXTENSION[extension] ?? 'image/jpeg',
+        bytes: async () => bytes,
+    };
+}
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -147,14 +179,10 @@ export async function uploadDocument(
         // Build multipart form data
         const formData = new FormData();
 
-        // Extract filename from URI
-        const fileName = imageUri.split('/').pop() || `${documentType}_${Date.now()}.jpg`;
-
-        formData.append('file', {
-            uri: imageUri,
-            name: fileName,
-            type: 'image/jpeg',
-        } as any);
+        formData.append(
+            'file',
+            (await toFilePart(imageUri, `${documentType}_${Date.now()}.jpg`)) as any,
+        );
         formData.append('type', documentType);
 
         const response = await authenticatedFetch(`${API_BASE_URL}/kyc/documents`, {
@@ -223,12 +251,10 @@ export async function verifyFace(
         const headers = await authHeaders();
         const formData = new FormData();
 
-        const fileName = selfieUri.split('/').pop() || `selfie_${Date.now()}.jpg`;
-        formData.append('file', {
-            uri: selfieUri,
-            name: fileName,
-            type: 'image/jpeg',
-        } as any);
+        formData.append(
+            'file',
+            (await toFilePart(selfieUri, `selfie_${Date.now()}.jpg`)) as any,
+        );
 
         const response = await authenticatedFetch(`${API_BASE_URL}/kyc/verify/face`, {
             method: 'POST',
