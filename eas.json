@@ -16,8 +16,9 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://unstated-lennie-steellike.ngrok-free.dev/api/v1",
         "EXPO_PUBLIC_WALLETCONNECT_PROJECT_ID": "98ef23473020d558cb6c33b74048df31",
-        "EXPO_PUBLIC_CHAIN_ID": "31337"
-      }
+        "EXPO_PUBLIC_CHAIN_ID": "11155111"
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
